@@ -1,6 +1,8 @@
 package mongo
 
 import (
+	"user-backend/pkg"
+
 	"gopkg.in/mgo.v2"
 )
 
@@ -8,20 +10,18 @@ type Session struct {
 	session *mgo.Session
 }
 
-func NewSession(url string) (*Session, error) {
-	session, err := mgo.Dial("localhost:27017")
+func NewSession(config *pkg.MongoConfig) (*Session, error) {
+	//var err error
+	session, err := mgo.Dial(config.Ip)
 	if err != nil {
 		return nil, err
 	}
+	session.SetMode(mgo.Monotonic, true)
 	return &Session{session}, err
 }
 
-func (s *Session) Copy() *Session {
-	return &Session{s.session.Copy()}
-}
-
-func (s *Session) GetCollection(db string, col string) *mgo.Collection {
-	return s.session.DB(db).C(col)
+func (s *Session) Copy() *mgo.Session {
+	return s.session.Copy()
 }
 
 func (s *Session) Close() {

@@ -3,14 +3,17 @@ package mongo
 import (
 	"user-backend/pkg"
 
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
 type userModel struct {
-	Id       bson.ObjectId `bson:"_id,omitempty"`
-	Username string
-	Password string
+	Id           bson.ObjectId `bson:"_id,omitempty"`
+	Username     string
+	PasswordHash string
+	Salt         string
 }
 
 func userModelIndex() mgo.Index {
@@ -23,15 +26,29 @@ func userModelIndex() mgo.Index {
 	}
 }
 
-func newUserModel(u *pkg.User) *userModel {
-	return &userModel{
-		Username: u.Username,
-		Password: u.Password}
+func newUserModel(u *pkg.User) (*userModel, error) {
+	user := userModel{Username: u.Username}
+	err := user.setSaltedPassword(u.Password)
+	return &user, err
 }
 
-func (u *userModel) toRootUser() *pkg.User {
-	return &pkg.User{
-		Id:       u.Id.Hex(),
-		Username: u.Username,
-		Password: u.Password}
+func (u *userModel) comparePassword(password string) error {
+	incoming := []byte(password + u.Salt)
+	existing := []byte(u.PasswordHash)
+	err := bcrypt.CompareHashAndPassword(existing, incoming)
+	return err
+}
+
+func (u *userModel) setSaltedPassword(password string) error {
+	salt := uuid.New().String()
+	passwordBytes := []byte(password + salt)
+	hash, err := bcrypt.GenerateFromPassword(passwordBytes, bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	u.PasswordHash = string(hash[:])
+	u.Salt = salt
+
+	return nil
 }

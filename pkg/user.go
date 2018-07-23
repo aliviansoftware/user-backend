@@ -7,6 +7,7 @@ type User struct {
 }
 
 type UserService interface {
-	Create(u *User) error
-	GetByUsername(username string) (*User, error)
+	CreateUser(u *User) error
+	GetUserByUsername(username string) (error, User)
+	Login(c Credentials) (error, User)
 }

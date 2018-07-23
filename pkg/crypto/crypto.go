@@ -8,13 +8,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-//Hash implements root.Hash
-type Hash struct{}
+//Hash implements pkg.Hash
+type Crypto struct{}
 
 var deliminator = "||"
 
 //Generate a salted hash for the input string
-func (c *Hash) Generate(s string) (string, error) {
+func (c *Crypto) Generate(s string) (string, error) {
 	salt := uuid.New().String()
 	saltedBytes := []byte(s + salt)
 	hashedBytes, err := bcrypt.GenerateFromPassword(saltedBytes, bcrypt.DefaultCost)
@@ -27,7 +27,7 @@ func (c *Hash) Generate(s string) (string, error) {
 }
 
 //Compare string to generated hash
-func (c *Hash) Compare(hash string, s string) error {
+func (c *Crypto) Compare(hash string, s string) error {
 	parts := strings.Split(hash, deliminator)
 	if len(parts) != 2 {
 		return errors.New("Invalid hash, must have 2 parts")

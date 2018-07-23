@@ -4,7 +4,6 @@ import (
 	"log"
 	"testing"
 	"user-backend/pkg"
-	"user-backend/pkg/mock"
 	"user-backend/pkg/mongo"
 )
 
@@ -20,16 +19,19 @@ func Test_UserService(t *testing.T) {
 
 func createUser_should_insert_user_into_mongo(t *testing.T) {
 	//Arrange
-	session, err := mongo.NewSession(mongoUrl)
+	mongoConfig := pkg.MongoConfig{
+		Ip:     "127.0.0.1:27017",
+		DbName: "user-backend"}
+	session, err := mongo.NewSession(&mongoConfig)
 	if err != nil {
 		log.Fatalf("Unable to connect to mongo: %s", err)
 	}
 	defer func() {
-		session.DropDatabase(dbName)
+		session.DropDatabase(mongoConfig.DbName)
 		session.Close()
 	}()
-	mockHash := mock.Hash{}
-	userService := mongo.NewUserService(session.Copy(), dbName, userCollectionName, &mockHash)
+
+	userService := mongo.NewUserService(session.Copy(), &mongoConfig)
 
 	testUsername := "integration_test_user"
 	testPassword := "integration_test_password"
@@ -38,20 +40,16 @@ func createUser_should_insert_user_into_mongo(t *testing.T) {
 		Password: testPassword}
 
 	//Act
-	err = userService.Create(&user)
+	err = userService.CreateUser(&user)
 
 	//Assert
 	if err != nil {
 		t.Errorf("Unable to create user: %s", err)
 	}
-	var results []pkg.User
-	session.GetCollection(dbName, userCollectionName).Find(nil).All(&results)
 
-	count := len(results)
-	if count != 1 {
-		t.Error("Incorrect number of results. Expected `1`, got: `%i`", count)
-	}
-	if results[0].Username != user.Username {
-		t.Errorf("Incorrect Username. Expected `%s`, Got: `%s`", testUsername, results[0].Username)
+	_, resultUser := userService.GetUserByUsername(testUsername)
+
+	if resultUser.Username != user.Username {
+		t.Errorf("Incorrect Username. Expected `%s`, Got: `%s`", testUsername, resultUser.Username)
 	}
 }

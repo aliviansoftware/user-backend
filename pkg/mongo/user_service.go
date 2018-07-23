@@ -9,27 +9,42 @@ import (
 
 type UserService struct {
 	collection *mgo.Collection
-	hash       pkg.Hash
 }
 
-func NewUserService(session *Session, dbName string, collectionName string, hash pkg.Hash) *UserService {
-	collection := session.GetCollection(dbName, collectionName)
+func NewUserService(session *mgo.Session, config *pkg.MongoConfig) *UserService {
+	collection := session.DB(config.DbName).C("user")
 	collection.EnsureIndex(userModelIndex())
-	return &UserService{collection, hash}
+	return &UserService{collection}
 }
 
-func (p *UserService) Create(u *pkg.User) error {
-	user := newUserModel(u)
-	hashedPassword, err := p.hash.Generate(user.Password)
+func (p *UserService) CreateUser(u *pkg.User) error {
+	user, err := newUserModel(u)
 	if err != nil {
 		return err
 	}
-	user.Password = hashedPassword
 	return p.collection.Insert(&user)
 }
 
-func (p *UserService) GetByUsername(username string) (*pkg.User, error) {
+func (p *UserService) GetUserByUsername(username string) (error, pkg.User) {
 	model := userModel{}
 	err := p.collection.Find(bson.M{"username": username}).One(&model)
-	return model.toRootUser(), err
+	return err, pkg.User{
+		Id:       model.Id.Hex(),
+		Username: model.Username,
+		Password: "-"}
+}
+
+func (p *UserService) Login(c pkg.Credentials) (error, pkg.User) {
+	model := userModel{}
+	err := p.collection.Find(bson.M{"username": c.Username}).One(&model)
+
+	err = model.comparePassword(c.Password)
+	if err != nil {
+		return err, pkg.User{}
+	}
+
+	return err, pkg.User{
+		Id:       model.Id.Hex(),
+		Username: model.Username,
+		Password: "-"}
 }

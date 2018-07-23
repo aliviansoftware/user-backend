@@ -4,6 +4,7 @@ import (
 	"log"
 	"testing"
 	"user-backend/pkg"
+	"user-backend/pkg/mock"
 	"user-backend/pkg/mongo"
 )
 
@@ -27,7 +28,8 @@ func createUser_should_insert_user_into_mongo(t *testing.T) {
 		session.DropDatabase(dbName)
 		session.Close()
 	}()
-	userService := mongo.NewUserService(session.Copy(), dbName, userCollectionName)
+	mockHash := mock.Hash{}
+	userService := mongo.NewUserService(session.Copy(), dbName, userCollectionName, &mockHash)
 
 	testUsername := "integration_test_user"
 	testPassword := "integration_test_password"

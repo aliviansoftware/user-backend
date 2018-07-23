@@ -1,0 +1,37 @@
+package mongo
+
+import (
+	"user-backend/pkg"
+
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
+)
+
+type userModel struct {
+	Id       bson.ObjectId `bson:"_id,omitempty"`
+	Username string
+	Password string
+}
+
+func userModelIndex() mgo.Index {
+	return mgo.Index{
+		Key:        []string{"username"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+}
+
+func newUserModel(u *pkg.User) *userModel {
+	return &userModel{
+		Username: u.Username,
+		Password: u.Password}
+}
+
+func (u *userModel) toRootUser() *pkg.User {
+	return &pkg.User{
+		Id:       u.Id.Hex(),
+		Username: u.Username,
+		Password: u.Password}
+}
